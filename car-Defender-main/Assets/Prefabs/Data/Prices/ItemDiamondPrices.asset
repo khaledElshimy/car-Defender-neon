@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46829508be88d4b49bc5c103d23b30b4, type: 3}
+  m_Name: ItemDiamondPrices
+  m_EditorClassIdentifier: 
+  _Prices:
+  - Level: 16
+    Price: 55
+  - Level: 17
+    Price: 78
+  - Level: 18
+    Price: 134
+  - Level: 19
+    Price: 180
+  - Level: 20
+    Price: 180
+  - Level: 21
+    Price: 187
+  - Level: 22
+    Price: 195
+  - Level: 23
+    Price: 240
+  - Level: 24
+    Price: 300
+  - Level: 25
+    Price: 375
+  - Level: 26
+    Price: 450
+  - Level: 27
+    Price: 600
+  - Level: 28
+    Price: 750
+  - Level: 29
+    Price: 930
+  - Level: 30
+    Price: 1125
+  - Level: 1
+    Price: 1
+  - Level: 2
+    Price: 3
+  - Level: 3
+    Price: 3
+  - Level: 4
+    Price: 4
+  - Level: 5
+    Price: 4
+  - Level: 6
+    Price: 6
+  - Level: 7
+    Price: 9
+  - Level: 8
+    Price: 10
+  - Level: 9
+    Price: 10
+  - Level: 10
+    Price: 13
+  - Level: 11
+    Price: 15
+  - Level: 12
+    Price: 18
+  - Level: 13
+    Price: 22
+  - Level: 14
+    Price: 33
+  - Level: 15
+    Price: 45

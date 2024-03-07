@@ -1,0 +1,105 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14c1225fe3a034d41905cde39a9b23d7, type: 3}
+  m_Name: WeaponData
+  m_EditorClassIdentifier: 
+  WeaponProperties:
+  - Level: 1
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 2
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 3
+    FireRate: 0.3
+    NumberBullets: 2
+  - Level: 4
+    FireRate: 0.3
+    NumberBullets: 3
+  - Level: 5
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 6
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 7
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 8
+    FireRate: 0.3
+    NumberBullets: 3
+  - Level: 9
+    FireRate: 0.3
+    NumberBullets: 2
+  - Level: 10
+    FireRate: 0.3
+    NumberBullets: 4
+  - Level: 11
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 12
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 13
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 14
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 15
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 16
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 17
+    FireRate: 0.25
+    NumberBullets: 1
+  - Level: 18
+    FireRate: 0.25
+    NumberBullets: 3
+  - Level: 19
+    FireRate: 0.25
+    NumberBullets: 5
+  - Level: 20
+    FireRate: 0.25
+    NumberBullets: 5
+  - Level: 21
+    FireRate: 0.5
+    NumberBullets: 1
+  - Level: 22
+    FireRate: 0.5
+    NumberBullets: 1
+  - Level: 23
+    FireRate: 0.3
+    NumberBullets: 3
+  - Level: 24
+    FireRate: 0.3
+    NumberBullets: 3
+  - Level: 25
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 26
+    FireRate: 0.3
+    NumberBullets: 1
+  - Level: 27
+    FireRate: 0.5
+    NumberBullets: 1
+  - Level: 28
+    FireRate: 0.5
+    NumberBullets: 1
+  - Level: 29
+    FireRate: 0.3
+    NumberBullets: 2
+  - Level: 30
+    FireRate: 0.3
+    NumberBullets: 2

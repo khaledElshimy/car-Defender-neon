@@ -1,0 +1,16 @@
+#
+# Sprite sheet data for Unity.
+#
+# To import these sprites into your Unity project, download "TexturePackerImporter":
+# https://www.codeandweb.com/texturepacker/unity
+#
+# $TexturePacker:SmartUpdate:ef8550a0c1a225d179b2971ebd340ffc:0a9a3e62de2dcf344b5662752ed24182:4339c2ece1cf12b0ae4396f8a1c649c0$
+#
+:format=40300
+:texture=Game.png
+:size=256x256
+:pivotpoints=enabled
+:borders=disabled
+
+ad_planet_ballnoon;1;152;226;103; 0.5;0.5; 0;0;0;0; 8;226;63;226;39;160;6;43;4;37;0;0;0;0;103;175;103; 6;3;6;7;5;6;3;5;3;4;2;3;7;0;1;2;0;2;7
+delete_house;1;27;120;123; 0.5;0.5; 0;0;0;0; 7;120;108;120;0;4;0;0;11;0;108;45;123;74;123; 5;3;5;6;3;4;5;1;3;6;1;2;3;0;1;6
