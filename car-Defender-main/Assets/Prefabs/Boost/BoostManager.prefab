@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0000076294, y: 55.67502}
-  m_SizeDelta: {x: 324.1, y: 111.35}
+  m_AnchoredPosition: {x: -2.27, y: -0.0000081062}
+  m_SizeDelta: {x: 598.1487, y: 99.00002}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2040147136
 CanvasRenderer:
@@ -58,16 +58,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.91764706, g: 0.8666667, b: 0.20784314, a: 1}
   m_RaycastTarget: 0
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_FontData:
-    m_Font: {fileID: 12800000, guid: 0fa3977b4f563544c87e2217b9a13493, type: 3}
-    m_FontSize: 55
+    m_Font: {fileID: 12800000, guid: 2344231b2745d1b48b59929bb5cd7ce9, type: 3}
+    m_FontSize: 39
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 5
@@ -192,10 +190,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_Sprite: {fileID: 21300368, guid: 56f8f035978f14cd989b79c39d04ec0a, type: 3}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 29719601b09d5b44a9e2fef2c60b575f, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -238,8 +234,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 415, y: 610}
-  m_SizeDelta: {x: 59, y: 59}
+  m_AnchoredPosition: {x: 436.4, y: 604.78}
+  m_SizeDelta: {x: 88, y: 98.3468}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222144496078350386
 CanvasRenderer:
@@ -267,9 +263,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_Sprite: {fileID: 21300374, guid: 56f8f035978f14cd989b79c39d04ec0a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f77d52ed1fef0894e9362fc428f7a86e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -329,8 +323,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-    m_TypeName: UnityEngine.UI.Button+ButtonClickedEvent, UnityEngine.UI, Version=1.0.0.0,
-      Culture=neutral, PublicKeyToken=null
 --- !u!1 &1446491563585926
 GameObject:
   m_ObjectHideFlags: 0
@@ -395,8 +387,6 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Sprite: {fileID: 21300016, guid: 56f8f035978f14cd989b79c39d04ec0a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
@@ -439,8 +429,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -1.9, y: -71.7}
-  m_SizeDelta: {x: 922.5, y: 1164.5}
+  m_AnchoredPosition: {x: 2.8422, y: -81.3}
+  m_SizeDelta: {x: 779.11584, y: 982.8877}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &114869019980001730
 MonoBehaviour:
@@ -501,8 +491,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -116}
-  m_SizeDelta: {x: 828.4, y: 313.90002}
+  m_AnchoredPosition: {x: 0, y: -149.57}
+  m_SizeDelta: {x: 651, y: 99}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222652072192691734
 CanvasRenderer:
@@ -530,9 +520,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_Sprite: {fileID: 21300026, guid: 56f8f035978f14cd989b79c39d04ec0a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 0379f34410c62e1428d86e5146a627a2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
