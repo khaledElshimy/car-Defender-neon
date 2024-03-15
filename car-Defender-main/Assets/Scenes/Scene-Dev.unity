@@ -6983,21 +6983,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 114321193668653526, guid: 41d5c4ece05e64b76ae52945968f552c,
+    - target: {fileID: 223055221858870036, guid: 41d5c4ece05e64b76ae52945968f552c,
         type: 3}
-      propertyPath: m_Transition
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 114362675117292172, guid: 41d5c4ece05e64b76ae52945968f552c,
-        type: 3}
-      propertyPath: m_Transition
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 114508922112603954, guid: 41d5c4ece05e64b76ae52945968f552c,
-        type: 3}
-      propertyPath: m_Transition
-      value: 1
-      objectReference: {fileID: 0}
+      propertyPath: m_Camera
+      value: 
+      objectReference: {fileID: 519420031}
     - target: {fileID: 223816299770021776, guid: 41d5c4ece05e64b76ae52945968f552c,
         type: 3}
       propertyPath: m_Camera
@@ -24684,10 +24674,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Bonus Manager
       objectReference: {fileID: 0}
-    - target: {fileID: 1889620028579714, guid: 1f01d7485c9b71c4f937cadefe6e2c6f, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 4937345556706286, guid: 1f01d7485c9b71c4f937cadefe6e2c6f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -24731,16 +24717,6 @@ PrefabInstance:
     - target: {fileID: 4937345556706286, guid: 1f01d7485c9b71c4f937cadefe6e2c6f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 114646536857664896, guid: 1f01d7485c9b71c4f937cadefe6e2c6f,
-        type: 3}
-      propertyPath: m_Transition
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 114740211836452414, guid: 1f01d7485c9b71c4f937cadefe6e2c6f,
-        type: 3}
-      propertyPath: m_Transition
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 223586948135152744, guid: 1f01d7485c9b71c4f937cadefe6e2c6f,
         type: 3}
