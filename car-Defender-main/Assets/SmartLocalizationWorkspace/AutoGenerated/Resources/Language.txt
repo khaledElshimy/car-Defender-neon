@@ -339,7 +339,7 @@
 		<value>We've collected</value>
 	</data>
 	<data name="Text_description_welcome_racer" xml:space="preserve">
-		<value>Welcome to Fantasy world!</value>
+		<value>Welcome to City Guardians!</value>
 	</data>
 	<data name="Text_description_will_available_in" xml:space="preserve">
 		<value>Will be available in:</value>
@@ -647,15 +647,6 @@
 	<data name="Text_tips_game_1" xml:space="preserve">
 		<value>Merge and Unlock more Spaceship to destroy the enemies.</value>
 	</data>
-	<data name="Text_title_notification_1" xml:space="preserve">
-		<value>Welcome a new day!</value>
-	</data>
-	<data name="Text_title_notification_2" xml:space="preserve">
-		<value>Have a nice day!</value>
-	</data>
-	<data name="Text_title_notification_3" xml:space="preserve">
-		<value>Suppppper Day!!!</value>
-	</data>
 	<data name="Text_tips_game_2" xml:space="preserve">
 		<value>Tips: Buy energy to increase the fire rate of Spaceships.</value>
 	</data>
@@ -676,5 +667,14 @@
 	</data>
 	<data name="Text_tips_game_8" xml:space="preserve">
 		<value>Tips: Use the lucky wheel to get more gifts.</value>
+	</data>
+	<data name="Text_title_notification_1" xml:space="preserve">
+		<value>Welcome a new day!</value>
+	</data>
+	<data name="Text_title_notification_2" xml:space="preserve">
+		<value>Have a nice day!</value>
+	</data>
+	<data name="Text_title_notification_3" xml:space="preserve">
+		<value>Suppppper Day!!!</value>
 	</data>
 </root>

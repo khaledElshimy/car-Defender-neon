@@ -267,7 +267,7 @@ public class ApplicationLanguage : Singleton<ApplicationLanguage>
         Text_label_settings         = share_instance.GetTextValue ("Text_label_settings");
         Text_label_sound            = share_instance.GetTextValue ("Text_label_sound");
 
-        Text_description_welcome_racer       = share_instance.GetTextValue ("Text_description_welcome_racer");
+        Text_description_welcome_racer = "Welcome to City Guardians!";
         Text_description_racing              = share_instance.GetTextValue ("Text_description_racing");
         Text_description_racing_II           = share_instance.GetTextValue ("Text_description_racing_II");
         Text_description_go_go               = share_instance.GetTextValue ("Text_description_go_go");
