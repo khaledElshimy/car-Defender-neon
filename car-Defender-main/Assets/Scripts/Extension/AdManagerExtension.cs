@@ -31,7 +31,7 @@ public static class AdManagerExtension
             return;
         }
 
-        AdsManager.Instance.ShowBanner ();
+        AdsManager.Instance.ShowBannerAd();
     }
 
     public static void DisableBanner (this MonoBehaviour mono)

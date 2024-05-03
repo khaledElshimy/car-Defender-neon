@@ -1,30 +1,44 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-
 using UnityEditor;
 using UnityEngine;
 
 namespace GoogleMobileAds.Editor
 {
-
     internal class GoogleMobileAdsSettings : ScriptableObject
     {
-        private const string MobileAdsSettingsDir = "Assets/GoogleMobileAds";
-
         private const string MobileAdsSettingsResDir = "Assets/GoogleMobileAds/Resources";
 
-        private const string MobileAdsSettingsFile =
-            "Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset";
+        private const string MobileAdsSettingsFile = "GoogleMobileAdsSettings";
 
-        private static GoogleMobileAdsSettings instance;
+        private const string MobileAdsSettingsFileExtension = ".asset";
 
-        [SerializeField]
-        private bool isAdManagerEnabled = false;
+        internal static GoogleMobileAdsSettings LoadInstance()
+        {
+            //Read from resources.
+            var instance = Resources.Load<GoogleMobileAdsSettings>(MobileAdsSettingsFile);
 
-        [SerializeField]
-        private bool isAdMobEnabled = false;
+            //Create instance if null.
+            if (instance == null)
+            {
+                Directory.CreateDirectory(MobileAdsSettingsResDir);
+                instance = ScriptableObject.CreateInstance<GoogleMobileAdsSettings>();
+                string assetPath = Path.Combine(
+                    MobileAdsSettingsResDir,
+                    MobileAdsSettingsFile + MobileAdsSettingsFileExtension);
+                AssetDatabase.CreateAsset(instance, assetPath);
+                AssetDatabase.SaveAssets();
+                Version agp = Version.Parse(Utils.AndroidGradlePluginVersion);
+                instance.validateGradleDependencies = true;
+                // Turn on Gradle Dependency Validation if AGP < 4.2.2
+                if (agp.Major > 4 || (agp.Major == 4 && agp.Minor >= 2 && agp.Build >= 2))
+                {
+                    instance.validateGradleDependencies = false;
+                }
+            }
+
+            return instance;
+        }
 
         [SerializeField]
         private string adMobAndroidAppId = string.Empty;
@@ -33,100 +47,67 @@ namespace GoogleMobileAds.Editor
         private string adMobIOSAppId = string.Empty;
 
         [SerializeField]
-        private bool delayAppMeasurementInit = false;
+        private bool enableKotlinXCoroutinesPackagingOption = true;
 
-        public bool IsAdManagerEnabled
+        [SerializeField]
+        private bool optimizeInitialization;
+
+        [SerializeField]
+        private bool optimizeAdLoading;
+
+        [SerializeField]
+        private string userTrackingUsageDescription;
+
+        [SerializeField]
+        private bool validateGradleDependencies;
+
+        public string GoogleMobileAdsAndroidAppId
         {
-            get
-            {
-                return Instance.isAdManagerEnabled;
-            }
+            get { return adMobAndroidAppId; }
 
-            set
-            {
-                Instance.isAdManagerEnabled = value;
-            }
+            set { adMobAndroidAppId = value; }
         }
 
-        public bool IsAdMobEnabled
+        public bool EnableKotlinXCoroutinesPackagingOption
         {
-            get
-            {
-                return Instance.isAdMobEnabled;
-            }
+            get { return enableKotlinXCoroutinesPackagingOption; }
 
-            set
-            {
-                Instance.isAdMobEnabled = value;
-            }
+            set { enableKotlinXCoroutinesPackagingOption = value; }
         }
 
-        public string AdMobAndroidAppId
+        public string GoogleMobileAdsIOSAppId
         {
-            get
-            {
-                return Instance.adMobAndroidAppId;
-            }
+            get { return adMobIOSAppId; }
 
-            set
-            {
-                Instance.adMobAndroidAppId = value;
-            }
+            set { adMobIOSAppId = value; }
         }
 
-        public string AdMobIOSAppId
+        public bool OptimizeInitialization
         {
-            get
-            {
-                return Instance.adMobIOSAppId;
-            }
+            get { return optimizeInitialization; }
 
-            set
-            {
-                Instance.adMobIOSAppId = value;
-            }
+            set { optimizeInitialization = value; }
         }
 
-        public bool DelayAppMeasurementInit
+        public bool OptimizeAdLoading
         {
-            get
-            {
-                return Instance.delayAppMeasurementInit;
-            }
+            get { return optimizeAdLoading; }
 
-            set
-            {
-                Instance.delayAppMeasurementInit = value;
-            }
+            set { optimizeAdLoading = value; }
         }
 
-        public static GoogleMobileAdsSettings Instance
+        public string UserTrackingUsageDescription
         {
-            get
-            {
-                if (instance == null)
-                {
-                    if (!AssetDatabase.IsValidFolder(MobileAdsSettingsResDir))
-                    {
-                        AssetDatabase.CreateFolder(MobileAdsSettingsDir, "Resources");
-                    }
+            get { return userTrackingUsageDescription; }
 
-                    instance = (GoogleMobileAdsSettings) AssetDatabase.LoadAssetAtPath(
-                        MobileAdsSettingsFile, typeof(GoogleMobileAdsSettings));
-
-                    if (instance == null)
-                    {
-                        instance = ScriptableObject.CreateInstance<GoogleMobileAdsSettings>();
-                        AssetDatabase.CreateAsset(instance, MobileAdsSettingsFile);
-                    }
-                }
-                return instance;
-            }
+            set { userTrackingUsageDescription = value; }
         }
 
-        internal void WriteSettingsToFile()
+        public bool ValidateGradleDependencies
         {
-            AssetDatabase.SaveAssets();
+            get { return validateGradleDependencies; }
+
+            set { validateGradleDependencies = value; }
         }
     }
 }

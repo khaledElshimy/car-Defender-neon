@@ -59,7 +59,7 @@ public class ApplicationManager : Singleton<ApplicationManager>
         {
             Time.timeScale = 1;
 
-            LocalNotification.DisableRetentionNotification ();
+          //  LocalNotification.DisableRetentionNotification ();
 
             return;
         }
@@ -69,7 +69,7 @@ public class ApplicationManager : Singleton<ApplicationManager>
         PlayerData._LastTimeOnline = Helper.GetUtcTimeString ();
         PlayerData.SaveLastTimeOnline ();
 
-        LocalNotification.EnableRetentionNotification ();
+      //  LocalNotification.EnableRetentionNotification ();
 
         Time.timeScale = 0;
     }

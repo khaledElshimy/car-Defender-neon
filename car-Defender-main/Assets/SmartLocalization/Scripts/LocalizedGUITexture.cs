@@ -8,7 +8,9 @@
 namespace SmartLocalization
 {
 using UnityEngine;
-using System.Collections;
+using UnityEngine.UI;
+
+	using System.Collections;
 
 public class LocalizedGUITexture : MonoBehaviour 
 {
@@ -34,8 +36,8 @@ public class LocalizedGUITexture : MonoBehaviour
 	
 	void OnChangeLanguage(LanguageManager languageManager)
 	{
-		//Initialize all your language specific variables here
-		GetComponent<GUITexture>().texture = LanguageManager.Instance.GetTexture(localizedKey);
+            //Initialize all your language specific variables here
+            GetComponent<RawImage>().texture = LanguageManager.Instance.GetTexture(localizedKey);
 	}
 }
 }//namespace SmartLocalization

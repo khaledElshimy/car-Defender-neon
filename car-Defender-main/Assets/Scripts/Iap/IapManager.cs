@@ -218,10 +218,10 @@ public class IapManager : Singleton<IapManager>, IStoreListener
         }
     }
 
-    public void OnInitializeFailed (InitializationFailureReason error)
+    public void OnInitializeFailed (InitializationFailureReason error, string message)
     {
         // Purchasing set-up has not succeeded. Check error for reason. Consider sharing this reason with the user.
-        Debug.Log ("OnInitializeFailed InitializationFailureReason:" + error);
+        Debug.Log ("OnInitializeFailed InitializationFailureReason: " + error +"\n Message: "+message );
     }
 
 
@@ -356,5 +356,11 @@ public class IapManager : Singleton<IapManager>, IStoreListener
         // A product purchase attempt did not succeed. Check failureReason for more detail. Consider sharing 
         // this reason with the user to guide their troubleshooting actions.
         Debug.Log (string.Format ("OnPurchaseFailed: FAIL. Product: '{0}', PurchaseFailureReason: {1}", product.definition.storeSpecificId, failureReason));
+    }
+
+    public void OnInitializeFailed(InitializationFailureReason error)
+    {
+        // Purchasing set-up has not succeeded. Check error for reason. Consider sharing this reason with the user.
+        Debug.Log("OnInitializeFailed InitializationFailureReason: " + error);
     }
 }
