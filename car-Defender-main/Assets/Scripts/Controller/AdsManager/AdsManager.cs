@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using GoogleMobileAds;
 using GoogleMobileAds.Api;
 using MEC;
 
@@ -10,6 +9,8 @@ public class AdsManager : Singleton<AdsManager>
 {
     #region Admobs
 
+    // App ID is configured in Assets > Google Mobile Ads > Settings (Google Mobile Ads SDK v9+);
+    // this field is kept so the Inspector value isn't lost on existing prefabs.
     [Header ("CONFIG")] [SerializeField] private string _AppId;
     [SerializeField]                     private string _BannerId;
     [SerializeField]                     private string _RewardVideoId;
@@ -31,8 +32,8 @@ public class AdsManager : Singleton<AdsManager>
     private bool IsRewardClosed;
     private bool IsRewardValid;
 
-    private RewardBasedVideoAd reward;
-    private BannerView         banner;
+    private RewardedAd reward;
+    private BannerView banner;
 
     private bool IsRemoveAds;
 
@@ -43,14 +44,10 @@ public class AdsManager : Singleton<AdsManager>
 
     private void Init ()
     {
-        // =============================== INIT THE AD ================================ //
-
-        MobileAds.Initialize (_AppId);
-
-        reward = RewardBasedVideoAd.Instance;
-        banner = new BannerView (_BannerId, AdSize.Banner, AdPosition.Bottom);
-
-        LogGame.Log ("[Ad Manager] Init Event Completed!");
+        MobileAds.Initialize (initStatus =>
+        {
+            LogGame.Log ("[Ad Manager] Init Event Completed!");
+        });
 
         RefreshRemoveAds ();
     }
@@ -72,8 +69,6 @@ public class AdsManager : Singleton<AdsManager>
         IsBannerAvailable      = true;
         return;
         #endif
-        RegisterRewardCallBack ();
-        RegisterBannerCallBack ();
 
         RefreshRewardVideo ();
         RefreshBanner ();
@@ -89,14 +84,14 @@ public class AdsManager : Singleton<AdsManager>
 
         RegisterEvent ();
     }
-    
+
     private IEnumerator<float> _LoadAds ()
     {
         while (IsWatchedRewardAds == false)
         {
             yield return Timing.WaitForOneFrame;
         }
-        
+
         if (IsWatchedRewardAds)
         {
             IsWatchedRewardAds = false;
@@ -134,37 +129,23 @@ public class AdsManager : Singleton<AdsManager>
 
     #region Reward Callback
 
-    private void RegisterRewardCallBack ()
+    private void RegisterRewardCallBack (RewardedAd ad)
     {
-        reward.OnAdClosed       += RewardOnOnAdClosed;
-        reward.OnAdRewarded     += RewardOnOnAdRewarded;
-        reward.OnAdFailedToLoad += RewardOnOnAdFailedToLoad;
-        reward.OnAdLoaded       += RewardOnOnAdLoaded;
+        ad.OnAdFullScreenContentClosed += RewardOnFullScreenContentClosed;
+        ad.OnAdFullScreenContentFailed += RewardOnFullScreenContentFailed;
     }
 
-    private void RewardOnOnAdLoaded (object sender, EventArgs e)
+    private void RewardOnFullScreenContentClosed ()
     {
-        IsRewardVideoAvailable = true;
-        IsRewardClosed         = false;
-        IsRewardValid          = false;
+        IsRewardClosed     = true;
+        IsWatchedRewardAds = true;
     }
 
-    private void RewardOnOnAdFailedToLoad (object sender, AdFailedToLoadEventArgs e)
+    private void RewardOnFullScreenContentFailed (AdError error)
     {
         IsRewardVideoAvailable = false;
 
         DoFailedRewardVideo ();
-    }
-
-    private void RewardOnOnAdRewarded (object sender, Reward e)
-    {
-        IsRewardValid = true;
-    }
-
-    private void RewardOnOnAdClosed (object sender, EventArgs e)
-    {
-        IsRewardClosed     = true;
-        IsWatchedRewardAds = true;
     }
 
     #endregion
@@ -173,22 +154,22 @@ public class AdsManager : Singleton<AdsManager>
 
     private void RegisterBannerCallBack ()
     {
-        banner.OnAdClosed       += BannerOnOnAdClosed;
-        banner.OnAdLoaded       += BannerOnOnAdLoaded;
-        banner.OnAdFailedToLoad += BannerOnOnAdFailedToLoad;
+        banner.OnBannerAdLoaded            += BannerOnAdLoaded;
+        banner.OnBannerAdLoadFailed        += BannerOnAdLoadFailed;
+        banner.OnAdFullScreenContentClosed += BannerOnAdClosed;
     }
 
-    private void BannerOnOnAdFailedToLoad (object sender, AdFailedToLoadEventArgs e)
+    private void BannerOnAdLoadFailed (LoadAdError error)
     {
         IsBannerAvailable = false;
     }
 
-    private void BannerOnOnAdLoaded (object sender, EventArgs e)
+    private void BannerOnAdLoaded ()
     {
         IsBannerAvailable = true;
     }
 
-    private void BannerOnOnAdClosed (object sender, EventArgs e)
+    private void BannerOnAdClosed ()
     {
         IsBannerAvailable = false;
     }
@@ -257,13 +238,13 @@ public class AdsManager : Singleton<AdsManager>
 
         #endif
 
-        if (reward.IsLoaded ())
+        if (reward != null && reward.CanShowAd ())
         {
             Timing.KillCoroutines (handleLoadAds);
-        
+
             handleLoadAds = Timing.RunCoroutine (_LoadAds ());
-            
-            reward.Show ();
+
+            reward.Show (r => { IsRewardValid = true; });
         }
         else
         {
@@ -280,7 +261,11 @@ public class AdsManager : Singleton<AdsManager>
             return;
         }
 
-        if (IsBannerAvailable)
+        #if UNITY_EDITOR || UNITY_STANDALONE
+        return;
+        #endif
+
+        if (IsBannerAvailable && banner != null)
         {
             banner.Show ();
         }
@@ -300,9 +285,30 @@ public class AdsManager : Singleton<AdsManager>
     {
         if (IsRewardVideoAvailable) return;
 
-        AdRequest request = new AdRequest.Builder ().Build ();
+        if (reward != null)
+        {
+            reward.Destroy ();
+            reward = null;
+        }
 
-        reward.LoadAd (request, _RewardVideoId);
+        AdRequest request = new AdRequest ();
+
+        RewardedAd.Load (_RewardVideoId, request, (RewardedAd ad, LoadAdError error) =>
+        {
+            if (error != null || ad == null)
+            {
+                IsRewardVideoAvailable = false;
+                DoFailedRewardVideo ();
+                return;
+            }
+
+            reward                 = ad;
+            IsRewardVideoAvailable = true;
+            IsRewardClosed         = false;
+            IsRewardValid          = false;
+
+            RegisterRewardCallBack (ad);
+        });
     }
 
     public void RefreshBanner ()
@@ -312,7 +318,13 @@ public class AdsManager : Singleton<AdsManager>
 
         if (IsBannerAvailable) return;
 
-        AdRequest request = new AdRequest.Builder ().Build ();
+        if (banner == null)
+        {
+            banner = new BannerView (_BannerId, AdSize.Banner, AdPosition.Bottom);
+            RegisterBannerCallBack ();
+        }
+
+        AdRequest request = new AdRequest ();
 
         banner.LoadAd (request);
     }

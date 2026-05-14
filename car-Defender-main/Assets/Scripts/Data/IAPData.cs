@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[CreateAssetMenu(fileName = "IAPData", menuName = "Data/IAP Data", order = 50)]
 public class IAPData : ScriptableObject
 {
     public IapEnums.IapId   id;

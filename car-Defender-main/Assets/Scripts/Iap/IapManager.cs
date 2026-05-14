@@ -56,7 +56,11 @@ public class IapManager : Singleton<IapManager>, IStoreListener
 
         for (int i = 0; i < _IapData.Length; i++)
         {
-            builder.AddProduct (_IapData[i].IapId, ProductType.Consumable);
+            ProductType productType = _IapData[i].TypeIap == IapEnums.TypeIap.NonConsumable
+                ? ProductType.NonConsumable
+                : ProductType.Consumable;
+
+            builder.AddProduct (_IapData[i].IapId, productType);
             _PriceLocals.Add (_IapData[i].IapId, _IapData[i].PriceOffline);
             PriceFloats.Add (_IapData[i].IapId, 0.1f);
         }
@@ -222,6 +226,11 @@ public class IapManager : Singleton<IapManager>, IStoreListener
     {
         // Purchasing set-up has not succeeded. Check error for reason. Consider sharing this reason with the user.
         Debug.Log ("OnInitializeFailed InitializationFailureReason:" + error);
+    }
+
+    public void OnInitializeFailed (InitializationFailureReason error, string message)
+    {
+        Debug.Log ("OnInitializeFailed InitializationFailureReason:" + error + " message:" + message);
     }
 
 
