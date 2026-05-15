@@ -121,6 +121,9 @@ public class GameManager : Singleton<GameManager>
 
 
         ApplicationManager.IsGameReady = true;
+
+        if (CrazyGamesIntegration.Instance != null)
+            CrazyGamesIntegration.Instance.NotifyGameplayStart ();
     }
 
     private void Update ()
@@ -701,6 +704,9 @@ public class GameManager : Singleton<GameManager>
         }
 
         ApplicationManager.Instance.CheckUnlockLevelRate ();
+
+        if (CrazyGamesIntegration.Instance != null)
+            CrazyGamesIntegration.Instance.NotifyHappyTime ();
     }
 
     public void EnableOutlineSelected (int instanceId, int level)
@@ -938,6 +944,9 @@ public class GameManager : Singleton<GameManager>
 
         Is_game_over_loading = true;
 
+        if (CrazyGamesIntegration.Instance != null)
+            CrazyGamesIntegration.Instance.NotifyGameplayStop ();
+
         Timing.RunCoroutine (Enumerator_Animation_EndGame ());
     }
 
@@ -947,6 +956,9 @@ public class GameManager : Singleton<GameManager>
             return;
 
         Is_game_over_loading = true;
+
+        if (CrazyGamesIntegration.Instance != null)
+            CrazyGamesIntegration.Instance.NotifyHappyTime ();
 
         Timing.RunCoroutine (Enumerator_Animation_NextWave ());
     }

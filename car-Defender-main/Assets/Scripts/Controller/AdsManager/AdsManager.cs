@@ -238,6 +238,19 @@ public class AdsManager : Singleton<AdsManager>
 
         #endif
 
+        #if UNITY_WEBGL
+        // On the web build we route rewarded ads through the CrazyGames SDK
+        // instead of AdMob. AdMob's WebGL support is unofficial and CrazyGames
+        // is the ad partner for the portal anyway.
+        if (CrazyGamesIntegration.Instance != null)
+        {
+            CrazyGamesIntegration.Instance.RequestRewardedAd (
+                onReward: DoCompletedRewardVideo,
+                onError:  DoFailedRewardVideo);
+            return;
+        }
+        #endif
+
         if (reward != null && reward.CanShowAd ())
         {
             Timing.KillCoroutines (handleLoadAds);
@@ -285,6 +298,14 @@ public class AdsManager : Singleton<AdsManager>
     {
         if (IsRewardVideoAvailable) return;
 
+        #if UNITY_WEBGL && !UNITY_EDITOR
+        // CrazyGames requests ads on-demand; no preload step required.
+        // We mark the reward video available so the rest of the game flow
+        // (which gates buttons on this bool) keeps working.
+        IsRewardVideoAvailable = true;
+        return;
+        #endif
+
         if (reward != null)
         {
             reward.Destroy ();
@@ -317,6 +338,16 @@ public class AdsManager : Singleton<AdsManager>
             return;
 
         if (IsBannerAvailable) return;
+
+        #if UNITY_WEBGL && !UNITY_EDITOR
+        // Banners on WebGL are placed via the CrazyBanner component in the UI
+        // (Assets/CrazySDK/Resources/CrazyBanner.prefab). The SDK manages
+        // refresh internally; no AdMob banner is created.
+        if (CrazyGamesIntegration.Instance != null)
+            CrazyGamesIntegration.Instance.RefreshBanners ();
+        IsBannerAvailable = true;
+        return;
+        #endif
 
         if (banner == null)
         {

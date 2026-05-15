@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+  <title>{{{ PRODUCT_NAME }}}</title>
+
+  <style>
+    /* ===========================================================================
+       Portrait-locked layout for CrazyGames.
+       The canvas hard-locks to a 9:16 aspect, centered in whatever iframe size
+       CrazyGames provides. Wider containers letterbox with black bars on the
+       sides; taller containers letterbox top/bottom. The game's internal UI
+       (Canvas Scaler) handles its own scaling within that 9:16 area.
+       =========================================================================== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: sans-serif;
+      color: #ddd;
+    }
+
+    #unity-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Lock the canvas to 9:16. The two clauses below cover both layout cases:
+       - Container wider than 9:16 -> height fills, width is computed from it.
+       - Container narrower than 9:16 -> width fills, height is computed.        */
+    #unity-canvas {
+      background: #231F20;
+      display: block;
+      aspect-ratio: 9 / 16;
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+    @media (min-aspect-ratio: 9 / 16) {
+      #unity-canvas { height: 100vh; width: auto; }
+    }
+    @media (max-aspect-ratio: 9 / 16) {
+      #unity-canvas { width: 100vw; height: auto; }
+    }
+
+    /* Tiny loading text shown until createUnityInstance kicks in. */
+    #unity-loading-bar {
+      position: absolute;
+      left: 50%;
+      bottom: 12%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      letter-spacing: 0.05em;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+  </div>
+  <div id="unity-loading-bar">Loading {{{ PRODUCT_NAME }}}...</div>
+
+  <script>
+    /* ===========================================================================
+       CrazyGames key-capture fix
+       Prevents the browser/iframe from scrolling or activating built-in
+       shortcuts when the player presses gameplay keys: Space, Arrows, WASD,
+       ZQSD (AZERTY). Uses e.code (physical key position) so both QWERTY and
+       AZERTY layouts work transparently.
+       =========================================================================== */
+    (function () {
+      var BLOCKED = [
+        "Space",
+        "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+        "KeyW", "KeyA", "KeyS", "KeyD",
+        "KeyZ", "KeyQ"
+      ];
+
+      function shouldBlock(e) {
+        var tag = (e.target && e.target.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) {
+          return false;
+        }
+        return BLOCKED.indexOf(e.code) !== -1;
+      }
+
+      window.addEventListener("keydown", function (e) {
+        if (shouldBlock(e)) e.preventDefault();
+      }, { capture: true, passive: false });
+
+      window.addEventListener("keyup", function (e) {
+        if (shouldBlock(e)) e.preventDefault();
+      }, { capture: true, passive: false });
+    })();
+  </script>
+
+  <script>
+    /* ===========================================================================
+       Unity WebGL boot
+       Standard Unity 2022 loader pattern. CrazyGames serves the build files
+       with the proper Brotli Content-Encoding headers so no decompression
+       fallback is required.
+       =========================================================================== */
+    var canvas        = document.querySelector("#unity-canvas");
+    var loadingBar    = document.querySelector("#unity-loading-bar");
+    var buildUrl      = "Build";
+    var loaderUrl     = buildUrl + "/{{{ LOADER_FILENAME }}}";
+
+    var config = {
+      dataUrl:            buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl:       buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl:            buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName:        "{{{ COMPANY_NAME }}}",
+      productName:        "{{{ PRODUCT_NAME }}}",
+      productVersion:     "{{{ PRODUCT_VERSION }}}",
+      // showBanner:      function (msg, type) { /* hook for SDK warnings */ }
+    };
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (progress) {
+        loadingBar.textContent = "Loading... " + Math.round(progress * 100) + "%";
+      }).then(function (unityInstance) {
+        loadingBar.style.display = "none";
+      }).catch(function (message) {
+        console.error(message);
+      });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
