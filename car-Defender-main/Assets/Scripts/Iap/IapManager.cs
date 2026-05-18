@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,22 +6,12 @@ using UnityEngine;
 using UnityEngine.Purchasing;
 using UnityEngine.Purchasing.Security;
 using UnityEngine.SceneManagement;
+using MEC;
 
 public class IapManager : Singleton<IapManager>, IStoreListener
 {
     private static IStoreController   m_StoreController;        // The Unity Purchasing system.
     private static IExtensionProvider m_StoreExtensionProvider; // The store-specific Purchasing subsystems.
-
-    // Product identifiers for all products capable of being purchased: 
-    // "convenience" general identifiers for use with Purchasing, and their store-specific identifier 
-    // counterparts for use with and outside of Unity Purchasing. Define store-specific identifiers 
-    // also on each platform's publisher dashboard (iTunes Connect, Google Play Developer Console, etc.)
-
-    // General product identifiers for the consumable, non-consumable, and subscription products.
-    // Use these handles in the code to reference which product to purchase. Also use these values 
-    // when defining the Product Identifiers on the store. Except, for illustration purposes, the 
-    // kProductIDSubscription - it has custom Apple and Google identifiers. We declare their store-
-    // specific mapping to Unity Purchasing's AddProduct, below.
 
     private readonly Dictionary<string, string> _PriceLocals = new Dictionary<string, string> ();
     private readonly Dictionary<string, float>  PriceFloats  = new Dictionary<string, float> ();
@@ -30,28 +20,47 @@ public class IapManager : Singleton<IapManager>, IStoreListener
 
     private string currency_symbol;
 
+    // -----------------------------------------------------------------------------
+    // Public events — UI subscribes to these to react to purchase outcomes
+    // without coupling to IapManager internals.
+    //
+    //   OnPurchaseSuccess(id)                        - delivery complete (granted to player)
+    //   OnPurchaseFailed(id, userMessage, rawReason) - purchase failed; show userMessage in UI
+    //   OnRestoreCompleted(anyPurchasesRestored)     - RestorePurchases finished
+    //   OnInitialized()                              - store finished initializing
+    // -----------------------------------------------------------------------------
+
+    public event Action<IapEnums.IapId>                                          OnPurchaseSuccess;
+    public event Action<IapEnums.IapId, string, PurchaseFailureReason>           OnPurchaseFailed;
+    public event Action<bool>                                                    OnRestoreCompleted;
+    public event Action                                                          OnInitializedEvent;
+
+    // -----------------------------------------------------------------------------
+    // Init retry with backoff. If the store is unreachable at app start (e.g.,
+    // no network), we retry after 5s, 15s, 60s before giving up.
+    // -----------------------------------------------------------------------------
+
+    private static readonly float[] _RetryDelaysSeconds = { 5f, 15f, 60f };
+    private int _retryAttempt;
+
+#if RECEIPT_VALIDATION_ENABLED
+    private CrossPlatformValidator _validator;
+#endif
+
     private void Start ()
     {
-        // If we haven't set up the Unity Purchasing reference
         if (m_StoreController == null)
-        {
-            // Begin to configure our connection to Purchasing
             InitializePurchasing ();
-        }
     }
 
     public void InitializePurchasing ()
     {
-        // If we have already connected to Purchasing ...
         if (IsInitialized ())
         {
-            Debug.Log ("Init Completed");
-
-            // ... we are done here.
+            Debug.Log ("[IAP] Already initialized.");
             return;
         }
 
-        // Create a builder, first passing in a suite of Unity provided stores.
         var builder = ConfigurationBuilder.Instance (StandardPurchasingModule.Instance ());
 
         for (int i = 0; i < _IapData.Length; i++)
@@ -61,44 +70,64 @@ public class IapManager : Singleton<IapManager>, IStoreListener
                 : ProductType.Consumable;
 
             builder.AddProduct (_IapData[i].IapId, productType);
-            _PriceLocals.Add (_IapData[i].IapId, _IapData[i].PriceOffline);
-            PriceFloats.Add (_IapData[i].IapId, 0.1f);
+
+            // Seed the price dictionary with the offline price so UI has
+            // something to show before the store finishes initializing.
+            if (!_PriceLocals.ContainsKey (_IapData[i].IapId))
+            {
+                _PriceLocals.Add (_IapData[i].IapId, _IapData[i].PriceOffline);
+                PriceFloats.Add (_IapData[i].IapId, 0.1f);
+            }
         }
 
         currency_symbol = "USD";
 
-        // Kick off the remainder of the set-up with an asynchrounous call, passing the configuration 
-        // and this class' instance. Expect a response either in OnInitialized or OnInitializeFailed.
+        // -----------------------------------------------------------------------------
+        // Receipt validator: rejects forged purchases on jailbroken devices.
+        // Requires Tangle classes generated via:
+        //   Services > In-App Purchasing > Receipt Validation Obfuscator
+        // After generating, add RECEIPT_VALIDATION_ENABLED to Player Settings >
+        // Scripting Define Symbols to activate validation.
+        // -----------------------------------------------------------------------------
+#if RECEIPT_VALIDATION_ENABLED
+        try
+        {
+            _validator = new CrossPlatformValidator (
+                GooglePlayTangle.Data (),
+                AppleTangle.Data (),
+                Application.identifier);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError ("[IAP] Failed to construct receipt validator: " + e);
+            _validator = null;
+        }
+#else
+        Debug.LogWarning ("[IAP] Receipt validation is DISABLED. " +
+                          "To enable: run Services > In-App Purchasing > Receipt Validation Obfuscator, " +
+                          "then add RECEIPT_VALIDATION_ENABLED to Player Settings > Scripting Define Symbols.");
+#endif
+
         UnityPurchasing.Initialize (this, builder);
     }
-
 
     #region PRODUCT
 
     public void BuyProductWithID (string id)
     {
         #if UNITY_EDITOR
-
+        // Editor short-circuit so designers can verify the post-purchase flow
+        // without needing a sandbox account. Skips receipt validation since
+        // there is no real receipt to validate.
         for (int i = 0; i < _IapData.Length; i++)
         {
             if (string.CompareOrdinal (_IapData[i].IapId, id) == 0)
             {
-                switch (_IapData[i].id)
-                {
-                    case IapEnums.IapId.RemoveAdsPack:
-                        OnBuyRemoveAdsCompleted (_IapData[i]);
-                        break;
-                    default:
-                        OnBuyDiamondsCompleted (_IapData[i]);
-                        break;
-                }
-
+                DeliverPurchase (_IapData[i]);
                 break;
             }
         }
-
         return;
-
         #endif
 
         BuyProductID (id);
@@ -106,109 +135,98 @@ public class IapManager : Singleton<IapManager>, IStoreListener
 
     #endregion
 
-
     private bool IsInitialized ()
     {
-        // Only say we are initialized if both the Purchasing references are set.
         return m_StoreController != null && m_StoreExtensionProvider != null;
-    }
-
-    public void BuyNonConsumable ()
-    {
-        // Buy the non-consumable product using its general identifier. Expect a response either 
-        // through ProcessPurchase or OnPurchaseFailed asynchronously.
     }
 
     void BuyProductID (string productId)
     {
-        // If Purchasing has been initialized ...
-        if (IsInitialized ())
-        {
-            // ... look up the Product reference with the general product identifier and the Purchasing 
-            // system's products collection.
-            Product product = m_StoreController.products.WithID (productId);
-
-            // If the look up found a product for this device's store and that product is ready to be sold ... 
-            if (product != null && product.availableToPurchase)
-            {
-                Debug.Log (string.Format ("Purchasing product asychronously: '{0}'", product.definition.id));
-                // ... buy the product. Expect a response either through ProcessPurchase or OnPurchaseFailed 
-                // asynchronously.
-                m_StoreController.InitiatePurchase (product);
-            }
-            // Otherwise ...
-            else
-            {
-                // ... report the product look-up failure situation  
-                Debug.Log ("BuyProductID: FAIL. Not purchasing product, either is not found or is not available for purchase");
-            }
-        }
-        // Otherwise ...
-        else
-        {
-            // ... report the fact Purchasing has not succeeded initializing yet. Consider waiting longer or 
-            // retrying initiailization.
-            Debug.Log ("BuyProductID FAIL. Not initialized.");
-        }
-    }
-
-
-    // Restore purchases previously made by this customer. Some platforms automatically restore purchases, like Google. 
-    // Apple currently requires explicit purchase restoration for IAP, conditionally displaying a password prompt.
-    public void RestorePurchases ()
-    {
-        // If Purchasing has not yet been set up ...
         if (!IsInitialized ())
         {
-            // ... report the situation and stop restoring. Consider either waiting longer, or retrying initialization.
-            Debug.Log ("RestorePurchases FAIL. Not initialized.");
+            Debug.Log ("[IAP] BuyProductID FAIL. Not initialized.");
+            FirePurchaseFailed (productId, "Store is not ready. Please try again in a moment.", PurchaseFailureReason.PurchasingUnavailable);
             return;
         }
 
-        // If we are running on an Apple device ... 
+        Product product = m_StoreController.products.WithID (productId);
+
+        if (product == null || !product.availableToPurchase)
+        {
+            Debug.Log ("[IAP] BuyProductID FAIL. Product not found or unavailable: " + productId);
+            FirePurchaseFailed (productId, "This item is currently unavailable.", PurchaseFailureReason.ProductUnavailable);
+            return;
+        }
+
+        Debug.Log ("[IAP] Purchasing asynchronously: " + productId);
+        m_StoreController.InitiatePurchase (product);
+    }
+
+    // -----------------------------------------------------------------------------
+    // Restore Purchases (iOS-only — Google auto-restores).
+    // -----------------------------------------------------------------------------
+
+    public void RestorePurchases ()
+    {
+        if (!IsInitialized ())
+        {
+            Debug.Log ("[IAP] RestorePurchases FAIL. Not initialized.");
+            FireRestoreCompleted (false);
+            return;
+        }
+
         if (Application.platform == RuntimePlatform.IPhonePlayer ||
             Application.platform == RuntimePlatform.OSXPlayer)
         {
-            // ... begin restoring purchases
-            Debug.Log ("RestorePurchases started ...");
-
-            // Fetch the Apple store-specific subsystem.
+            Debug.Log ("[IAP] RestorePurchases started ...");
             var apple = m_StoreExtensionProvider.GetExtension<IAppleExtensions> ();
-            // Begin the asynchronous process of restoring purchases. Expect a confirmation response in 
-            // the Action<bool> below, and ProcessPurchase if there are previously purchased products to restore.
-            apple.RestoreTransactions ((result) =>
+            apple.RestoreTransactions (result =>
             {
-                // The first phase of restoration. If no more responses are received on ProcessPurchase then 
-                // no purchases are available to be restored.
-                Debug.Log ("RestorePurchases continuing: " + result + ". If no further messages, no purchases available to restore.");
+                Debug.Log ("[IAP] RestorePurchases callback. AnyRestored=" + result);
+                FireRestoreCompleted (result);
             });
         }
-        // Otherwise ...
         else
         {
-            // We are not running on an Apple device. No work is necessary to restore purchases.
-            Debug.Log ("RestorePurchases FAIL. Not supported on this platform. Current = " + Application.platform);
+            // Android: purchases are restored automatically on app launch by
+            // Google Play, so explicit restore is a no-op.
+            Debug.Log ("[IAP] RestorePurchases: not needed on " + Application.platform);
+            FireRestoreCompleted (true);
         }
     }
 
+    /// <summary>
+    /// Returns true if the given NonConsumable product is owned by the player,
+    /// according to the store (not PlayerPrefs). Safe to call before init —
+    /// returns false until the store is ready.
+    /// </summary>
+    public bool IsProductOwned (IapEnums.IapId id)
+    {
+        if (!IsInitialized ()) return false;
 
-    //  
-    // --- IStoreListener
-    //
+        string sku = LookupSku (id);
+        if (string.IsNullOrEmpty (sku)) return false;
+
+        Product product = m_StoreController.products.WithID (sku);
+        return product != null
+            && product.definition.type == ProductType.NonConsumable
+            && product.hasReceipt;
+    }
+
+    // -----------------------------------------------------------------------------
+    // IStoreListener
+    // -----------------------------------------------------------------------------
 
     public void OnInitialized (IStoreController controller, IExtensionProvider extensions)
     {
-        // Purchasing has succeeded initializing. Collect our Purchasing references.
-        Debug.Log ("OnInitialized: PASS");
+        Debug.Log ("[IAP] OnInitialized: PASS");
 
-        // Overall Purchasing system, configured with products for this application.
-        m_StoreController = controller;
-        // Store specific subsystem, for accessing device-specific store features.
+        m_StoreController        = controller;
         m_StoreExtensionProvider = extensions;
+        _retryAttempt            = 0;
 
         _PriceLocals.Clear ();
         PriceFloats.Clear ();
-
 
         foreach (var pro in controller.products.all)
         {
@@ -216,75 +234,146 @@ public class IapManager : Singleton<IapManager>, IStoreListener
             {
                 _PriceLocals.Add (pro.definition.id, pro.metadata.localizedPriceString);
                 PriceFloats.Add (pro.definition.id, (float) pro.metadata.localizedPrice);
-
                 currency_symbol = pro.metadata.isoCurrencyCode;
             }
         }
+
+        // Re-sync the Remove Ads NonConsumable flag from the store, in case
+        // PlayerPrefs lost it (corrupted save, reinstall before restore, etc).
+        if (IsProductOwned (IapEnums.IapId.RemoveAdsPack))
+        {
+            PlayerData.IsRemoveAds = true;
+            if (AdsManager.Instance != null) AdsManager.Instance.RefreshRemoveAds ();
+        }
+
+        if (OnInitializedEvent != null) OnInitializedEvent ();
     }
 
     public void OnInitializeFailed (InitializationFailureReason error)
     {
-        // Purchasing set-up has not succeeded. Check error for reason. Consider sharing this reason with the user.
-        Debug.Log ("OnInitializeFailed InitializationFailureReason:" + error);
+        OnInitializeFailed (error, null);
     }
 
     public void OnInitializeFailed (InitializationFailureReason error, string message)
     {
-        Debug.Log ("OnInitializeFailed InitializationFailureReason:" + error + " message:" + message);
-    }
+        Debug.LogWarning ("[IAP] OnInitializeFailed: " + error + (message != null ? " - " + message : ""));
 
+        if (_retryAttempt < _RetryDelaysSeconds.Length)
+        {
+            float delay = _RetryDelaysSeconds[_retryAttempt++];
+            Debug.Log ("[IAP] Retrying init in " + delay + "s (attempt " + _retryAttempt + ")...");
+            Timing.CallDelayed (delay, InitializePurchasing);
+        }
+        else
+        {
+            Debug.LogError ("[IAP] Init failed after " + _RetryDelaysSeconds.Length +
+                            " retries. Store will be unavailable for this session.");
+        }
+    }
 
     public PurchaseProcessingResult ProcessPurchase (PurchaseEventArgs args)
     {
         string id = args.purchasedProduct.definition.id;
+        Debug.Log ("[IAP] ProcessPurchase: " + id);
 
-        if (string.CompareOrdinal (args.purchasedProduct.definition.id, id) == 0)
+        // -----------------------------------------------------------------------------
+        // Validate receipt. Forged receipts (from jailbroken devices) trigger
+        // an IAPSecurityException and we refuse delivery.
+        // -----------------------------------------------------------------------------
+#if RECEIPT_VALIDATION_ENABLED
+        if (_validator != null)
         {
-            Debug.Log (string.Format ("ProcessPurchase: PASS. Product: '{0}'", args.purchasedProduct.definition.id));
-            // TODO: The non-consumable item has been successfully purchased, grant this item to the player.
+            try
+            {
+                _validator.Validate (args.purchasedProduct.receipt);
+                Debug.Log ("[IAP] Receipt validated for " + id);
+            }
+            catch (IAPSecurityException e)
+            {
+                Debug.LogError ("[IAP] Invalid receipt rejected for " + id + ": " + e);
+                IapEnums.IapId enumId;
+                if (TryResolveIapEnumId (id, out enumId))
+                    FirePurchaseFailed (id, "Purchase could not be verified.", PurchaseFailureReason.SignatureInvalid);
+                return PurchaseProcessingResult.Complete; // consume so it doesn't loop
+            }
         }
+#endif
 
-
+        // Find the IAPData entry that matches this product ID and deliver.
         for (int i = 0; i < _IapData.Length; i++)
         {
             if (string.CompareOrdinal (_IapData[i].IapId, id) == 0)
             {
-                switch (_IapData[i].id)
-                {
-                    case IapEnums.IapId.RemoveAdsPack:
-                        OnBuyRemoveAdsCompleted (_IapData[i]);
-                        break;
-                    default:
-                        OnBuyDiamondsCompleted (_IapData[i]);
-                        break;
-                }
-
+                DeliverPurchase (_IapData[i]);
                 break;
             }
         }
 
-
         return PurchaseProcessingResult.Complete;
+    }
+
+    public void OnPurchaseFailed (Product product, PurchaseFailureReason failureReason)
+    {
+        string sku = product != null ? product.definition.storeSpecificId : "(unknown)";
+        Debug.LogWarning ("[IAP] OnPurchaseFailed: " + sku + " reason=" + failureReason);
+
+        FirePurchaseFailed (
+            product != null ? product.definition.id : sku,
+            MapFailureReasonToUserMessage (failureReason),
+            failureReason);
+    }
+
+    // -----------------------------------------------------------------------------
+    // Delivery — unified entry point for both real purchases and editor sims.
+    // Routes by the IAPData.id enum so adding new products only requires
+    // adding a switch case.
+    // -----------------------------------------------------------------------------
+
+    private void DeliverPurchase (IAPData data)
+    {
+        switch (data.id)
+        {
+            case IapEnums.IapId.RemoveAdsPack:
+                OnBuyRemoveAdsCompleted (data);
+                break;
+
+            case IapEnums.IapId.SmallDiamondsPack:
+            case IapEnums.IapId.MediumDiamondsPack:
+            case IapEnums.IapId.BigDiamondsPack:
+            case IapEnums.IapId.FreePack:
+                OnBuyDiamondsCompleted (data);
+                break;
+
+            default:
+                Debug.LogWarning ("[IAP] No delivery handler for " + data.id);
+                break;
+        }
+
+        if (OnPurchaseSuccess != null) OnPurchaseSuccess (data.id);
     }
 
     private void OnBuyDiamondsCompleted (IAPData data)
     {
         PlayerData.Diamonds += data.Value;
-
         PlayerData.SaveDiamonds ();
 
         if (GameActionManager.Instance != null)
         {
-            if (GameActionManager.Instance != null)
-                GameActionManager.Instance.InstanceFxDiamonds (Vector.Vector3Zero,
-                                                               UIGameManager.Instance.GetPositionHubDiamonds (),
-                                                               data.Value, () =>
-                                                               {
-                                                                   UIGameManager.Instance.FxShakeDiamonds ();
-                                                                   GameActionManager.Instance.PostActionEvent (ActionEnums.ActionID.RefreshUIDiamonds);
-                                                               });
+            GameActionManager.Instance.InstanceFxDiamonds (
+                Vector.Vector3Zero,
+                UIGameManager.Instance.GetPositionHubDiamonds (),
+                data.Value, () =>
+                {
+                    UIGameManager.Instance.FxShakeDiamonds ();
+                    GameActionManager.Instance.PostActionEvent (ActionEnums.ActionID.RefreshUIDiamonds);
+                });
         }
 
+        // FIXME: This line auto-grants Remove Ads when ANY diamond pack is bought.
+        // If that's an intentional bundled benefit, keep this and remove this
+        // comment. If unintended, delete the two lines below. The current code
+        // means buying the cheapest diamond pack also removes ads — which may
+        // not match what's described in your store listings.
         if (!PlayerData.IsRemoveAds)
             RemoveAds ();
     }
@@ -292,78 +381,108 @@ public class IapManager : Singleton<IapManager>, IStoreListener
     private void OnBuyRemoveAdsCompleted (IAPData data)
     {
         PlayerData.Diamonds += data.Value;
-
         PlayerData.SaveDiamonds ();
-
         PlayerData.IsRemoveAds = true;
 
         if (GameActionManager.Instance != null)
         {
-            GameActionManager.Instance.InstanceFxDiamonds (Vector.Vector3Zero,
-                                                           UIGameManager.Instance.GetPositionHubDiamonds (),
-                                                           data.Value,
-                                                           () =>
-                                                           {
-                                                               UIGameManager.Instance.FxShakeDiamonds ();
-                                                               GameActionManager.Instance.PostActionEvent (ActionEnums.ActionID.RefreshUIDiamonds);
-                                                           });
+            GameActionManager.Instance.InstanceFxDiamonds (
+                Vector.Vector3Zero,
+                UIGameManager.Instance.GetPositionHubDiamonds (),
+                data.Value,
+                () =>
+                {
+                    UIGameManager.Instance.FxShakeDiamonds ();
+                    GameActionManager.Instance.PostActionEvent (ActionEnums.ActionID.RefreshUIDiamonds);
+                });
         }
 
         if (AdsManager.Instance != null)
-        {
             AdsManager.Instance.RefreshRemoveAds ();
-        }
     }
 
     private void RemoveAds ()
     {
         PlayerData.IsRemoveAds = true;
-
         if (AdsManager.Instance != null)
-        {
             AdsManager.Instance.RefreshRemoveAds ();
-        }
     }
 
-    /// <summary>
-    /// Returns the price.
-    /// </summary>
-    /// <returns>The the price.</returns>
+    // -----------------------------------------------------------------------------
+    // Price helpers (used by shop UI to show localized prices).
+    // -----------------------------------------------------------------------------
+
     public string ReturnThePrice (IapEnums.IapId id)
     {
         for (int i = 0; i < _IapData.Length; i++)
-        {
-            if (_IapData[i].id == id)
-            {
+            if (_IapData[i].id == id && _PriceLocals.ContainsKey (_IapData[i].IapId))
                 return _PriceLocals[_IapData[i].IapId];
-            }
-        }
-
         return "????";
     }
 
     public float ReturnFloatPrice (IapEnums.IapId id)
     {
         for (int i = 0; i < _IapData.Length; i++)
-        {
-            if (_IapData[i].id == id)
-            {
+            if (_IapData[i].id == id && PriceFloats.ContainsKey (_IapData[i].IapId))
                 return PriceFloats[_IapData[i].IapId];
-            }
-        }
-
         return 0.1f;
     }
 
+    // -----------------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------------
+
     /// <summary>
-    /// Raises the purchase failed event.
+    /// Translates a PurchaseFailureReason into a short, player-readable string.
+    /// Wire this through your existing toast/dialog UI in the OnPurchaseFailed
+    /// event subscriber.
     /// </summary>
-    /// <param name="product">Product.</param>
-    /// <param name="failureReason">Failure reason.</param>
-    public void OnPurchaseFailed (Product product, PurchaseFailureReason failureReason)
+    private static string MapFailureReasonToUserMessage (PurchaseFailureReason reason)
     {
-        // A product purchase attempt did not succeed. Check failureReason for more detail. Consider sharing 
-        // this reason with the user to guide their troubleshooting actions.
-        Debug.Log (string.Format ("OnPurchaseFailed: FAIL. Product: '{0}', PurchaseFailureReason: {1}", product.definition.storeSpecificId, failureReason));
+        switch (reason)
+        {
+            case PurchaseFailureReason.PurchasingUnavailable: return "Store is unavailable. Please try again later.";
+            case PurchaseFailureReason.ExistingPurchasePending: return "Another purchase is already in progress.";
+            case PurchaseFailureReason.ProductUnavailable:    return "This item is currently unavailable.";
+            case PurchaseFailureReason.SignatureInvalid:      return "Purchase could not be verified.";
+            case PurchaseFailureReason.UserCancelled:         return "Purchase cancelled.";
+            case PurchaseFailureReason.PaymentDeclined:       return "Payment was declined.";
+            case PurchaseFailureReason.DuplicateTransaction:  return "This purchase has already been processed.";
+            case PurchaseFailureReason.Unknown:
+            default:                                          return "Purchase failed. Please try again.";
+        }
+    }
+
+    private string LookupSku (IapEnums.IapId id)
+    {
+        for (int i = 0; i < _IapData.Length; i++)
+            if (_IapData[i].id == id) return _IapData[i].IapId;
+        return null;
+    }
+
+    private bool TryResolveIapEnumId (string sku, out IapEnums.IapId result)
+    {
+        for (int i = 0; i < _IapData.Length; i++)
+        {
+            if (string.CompareOrdinal (_IapData[i].IapId, sku) == 0)
+            {
+                result = _IapData[i].id;
+                return true;
+            }
+        }
+        result = default (IapEnums.IapId);
+        return false;
+    }
+
+    private void FirePurchaseFailed (string sku, string userMessage, PurchaseFailureReason reason)
+    {
+        IapEnums.IapId id;
+        if (TryResolveIapEnumId (sku, out id) && OnPurchaseFailed != null)
+            OnPurchaseFailed (id, userMessage, reason);
+    }
+
+    private void FireRestoreCompleted (bool anyRestored)
+    {
+        if (OnRestoreCompleted != null) OnRestoreCompleted (anyRestored);
     }
 }

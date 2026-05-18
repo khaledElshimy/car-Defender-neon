@@ -14,13 +14,19 @@ public class AdsManager : Singleton<AdsManager>
     [Header ("CONFIG")] [SerializeField] private string _AppId;
     [SerializeField]                     private string _BannerId;
     [SerializeField]                     private string _RewardVideoId;
+    [SerializeField]                     private string _InterstitialId;
 
     #endregion
 
     [Header ("Action")] public bool IsRewardVideoAvailable;
     public                     bool IsBannerAvailable;
+    public                     bool IsInterstitialAvailable;
 
     [Header ("Config")] [SerializeField] private bool IsAutoReloadAgain;
+    [Tooltip ("Show interstitial every Nth game over. Lower = more revenue, " +
+              "but hurts retention. 3 is a common compromise.")]
+    [SerializeField] private int  _InterstitialEveryNthGameOver = 3;
+    private int _gameOverCounter;
 
     public System.Action OnCompletedRewardVideo;
     public System.Action OnFailedRewardVideo;
@@ -32,8 +38,9 @@ public class AdsManager : Singleton<AdsManager>
     private bool IsRewardClosed;
     private bool IsRewardValid;
 
-    private RewardedAd reward;
-    private BannerView banner;
+    private RewardedAd     reward;
+    private BannerView     banner;
+    private InterstitialAd interstitial;
 
     private bool IsRemoveAds;
 
@@ -44,9 +51,26 @@ public class AdsManager : Singleton<AdsManager>
 
     private void Init ()
     {
-        MobileAds.Initialize (initStatus =>
+        // Init order (Apple + Google policy):
+        //   1. ATT prompt  (iOS only; collects IDFA permission)
+        //   2. UMP consent (GDPR/CCPA form if user is in a regulated region)
+        //   3. MobileAds.Initialize (now allowed to use whatever signals
+        //      consent + ATT granted)
+        //
+        // Each step's callback fires regardless of outcome, so the chain always
+        // reaches MobileAds.Initialize even if the user denies tracking.
+
+        AppTracking.RequestAuthorization (attStatus =>
         {
-            LogGame.Log ("[Ad Manager] Init Event Completed!");
+            LogGame.Log ("[Ad Manager] ATT status: " + attStatus);
+
+            UmpConsentManager.RequestConsent (onComplete: () =>
+            {
+                MobileAds.Initialize (initStatus =>
+                {
+                    LogGame.Log ("[Ad Manager] Init Event Completed!");
+                });
+            });
         });
 
         RefreshRemoveAds ();
@@ -65,13 +89,15 @@ public class AdsManager : Singleton<AdsManager>
     private void RegisterEvent ()
     {
         #if UNITY_EDITOR
-        IsRewardVideoAvailable = true;
-        IsBannerAvailable      = true;
+        IsRewardVideoAvailable  = true;
+        IsBannerAvailable       = true;
+        IsInterstitialAvailable = true;
         return;
         #endif
 
         RefreshRewardVideo ();
         RefreshBanner ();
+        RefreshInterstitial ();
     }
 
     #region System
@@ -327,5 +353,108 @@ public class AdsManager : Singleton<AdsManager>
         AdRequest request = new AdRequest ();
 
         banner.LoadAd (request);
+    }
+
+    // -----------------------------------------------------------------------------
+    // Interstitial ads
+    //
+    // Shown periodically on game over via TryShowInterstitialOnGameOver(). Bypassed
+    // entirely if the player has bought the Remove Ads IAP. Skipped in Editor and
+    // routed through the CrazyGames midroll on WebGL so we don't pay AdMob for
+    // impressions that won't fill on web.
+    // -----------------------------------------------------------------------------
+
+    public void RefreshInterstitial ()
+    {
+        if (IsRemoveAds)         return;
+        if (IsInterstitialAvailable) return;
+        if (string.IsNullOrEmpty (_InterstitialId)) return;
+
+        #if UNITY_WEBGL && !UNITY_EDITOR
+        // CrazyGames serves the equivalent ad via RequestMidrollAd; no preload here.
+        IsInterstitialAvailable = true;
+        return;
+        #endif
+
+        if (interstitial != null)
+        {
+            interstitial.Destroy ();
+            interstitial = null;
+        }
+
+        AdRequest request = new AdRequest ();
+
+        InterstitialAd.Load (_InterstitialId, request, (InterstitialAd ad, LoadAdError error) =>
+        {
+            if (error != null || ad == null)
+            {
+                IsInterstitialAvailable = false;
+                return;
+            }
+
+            interstitial             = ad;
+            IsInterstitialAvailable  = true;
+
+            ad.OnAdFullScreenContentClosed += () =>
+            {
+                IsInterstitialAvailable = false;
+                if (IsAutoReloadAgain) RefreshInterstitial ();
+            };
+            ad.OnAdFullScreenContentFailed += (AdError err) =>
+            {
+                IsInterstitialAvailable = false;
+                if (IsAutoReloadAgain) RefreshInterstitial ();
+            };
+        });
+    }
+
+    /// <summary>
+    /// Force-show an interstitial now. Returns true if one was actually displayed.
+    /// </summary>
+    public bool ShowInterstitial ()
+    {
+        if (IsRemoveAds) return false;
+
+        #if UNITY_EDITOR || UNITY_STANDALONE
+        // No real ad in editor; pretend we showed one so the caller's pacing
+        // logic still iterates correctly.
+        return true;
+        #endif
+
+        #if UNITY_WEBGL && !UNITY_EDITOR
+        if (CrazyGamesIntegration.Instance != null)
+        {
+            CrazyGamesIntegration.Instance.RequestMidrollAd ();
+            return true;
+        }
+        return false;
+        #endif
+
+        if (interstitial != null && interstitial.CanShowAd ())
+        {
+            interstitial.Show ();
+            IsInterstitialAvailable = false;
+            return true;
+        }
+
+        // Couldn't show; kick off a preload so the next attempt has one ready.
+        RefreshInterstitial ();
+        return false;
+    }
+
+    /// <summary>
+    /// Show an interstitial every Nth game over, where N is _InterstitialEveryNthGameOver.
+    /// Game code calls this from GameManager.EnableGameOver so the placement
+    /// strategy lives in one place and can be tuned in the inspector.
+    /// </summary>
+    public void TryShowInterstitialOnGameOver ()
+    {
+        if (IsRemoveAds) return;
+        if (_InterstitialEveryNthGameOver <= 0) return;
+
+        _gameOverCounter++;
+        if (_gameOverCounter % _InterstitialEveryNthGameOver != 0) return;
+
+        ShowInterstitial ();
     }
 }

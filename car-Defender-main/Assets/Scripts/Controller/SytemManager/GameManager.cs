@@ -938,6 +938,9 @@ public class GameManager : Singleton<GameManager>
 
         Is_game_over_loading = true;
 
+        if (AdsManager.Instance != null)
+            AdsManager.Instance.TryShowInterstitialOnGameOver ();
+
         Timing.RunCoroutine (Enumerator_Animation_EndGame ());
     }
 
